@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scroll to Play</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=DM+Mono:wght@300&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --cream: #f5f0e8;
+    --ink: #1a1714;
+    --muted: #8a8278;
+    --accent: #c8a96e;
+  }
+
+  html { scroll-behavior: auto; }
+
+  body {
+    background: var(--ink);
+    color: var(--cream);
+    font-family: 'DM Mono', monospace;
+    overflow-x: hidden;
+  }
+
+  /* ── intro ── */
+  #intro {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    position: relative;
+  }
+
+  #intro h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: clamp(3rem, 8vw, 7rem);
+    letter-spacing: 0.08em;
+    color: var(--cream);
+    text-align: center;
+    line-height: 1.1;
+  }
+
+  #intro p {
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .scroll-arrow {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    animation: bob 2s ease-in-out infinite;
+  }
+
+  .scroll-arrow span {
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+  }
+
+  .scroll-arrow svg {
+    width: 20px;
+    height: 20px;
+    stroke: var(--accent);
+    fill: none;
+    stroke-width: 1.5;
+  }
+
+  @keyframes bob {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(8px); }
+  }
+
+  /* ── scroll scene ── */
+  #scroll-scene {
+    height: 400vh;
+    position: relative;
+  }
+
+  #sticky-shell {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  /* video side */
+  #video-side {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+  }
+
+  video {
+    width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+
+  /* grain overlay */
+  #video-side::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    opacity: 0.4;
+    border-radius: 4px;
+  }
+
+  /* info panel */
+  #info-panel {
+    border-left: 1px solid rgba(255,255,255,0.07);
+    padding: 3rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  #panel-top {}
+
+  #panel-top .label {
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+  }
+
+  #panel-top h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: 2.4rem;
+    line-height: 1.2;
+    color: var(--cream);
+    margin-bottom: 1.5rem;
+  }
+
+  #panel-top p {
+    font-size: 0.7rem;
+    line-height: 1.9;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+
+  /* timeline */
+  #timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .tl-item {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 12px;
+    align-items: start;
+    padding: 14px 0;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    transition: opacity 0.4s;
+    opacity: 0.3;
+  }
+
+  .tl-item.active {
+    opacity: 1;
+  }
+
+  .tl-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    margin-top: 5px;
+    transition: background 0.4s, transform 0.4s;
+  }
+
+  .tl-item.active .tl-dot {
+    background: var(--accent);
+    transform: scale(1.4);
+  }
+
+  .tl-text .tl-title {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--cream);
+    margin-bottom: 4px;
+  }
+
+  .tl-text .tl-desc {
+    font-size: 0.62rem;
+    color: var(--muted);
+    line-height: 1.6;
+    letter-spacing: 0.01em;
+  }
+
+  /* progress bar */
+  #progress-wrap {
+    position: absolute;
+    bottom: 2rem;
+    left: 3rem;
+    right: 340px;
+    padding-right: 3rem;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  #progress-track {
+    flex: 1;
+    height: 1px;
+    background: rgba(255,255,255,0.1);
+    position: relative;
+  }
+
+  #progress-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.08s linear;
+  }
+
+  #progress-time {
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    min-width: 40px;
+    text-align: right;
+  }
+
+  /* outro */
+  #outro {
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #outro p {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.5rem, 4vw, 3rem);
+    font-weight: 300;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-align: center;
+  }
+
+  /* mobile */
+  @media (max-width: 700px) {
+    #sticky-shell { grid-template-columns: 1fr; }
+    #info-panel { display: none; }
+    #progress-wrap { right: 2rem; padding-right: 0; }
+  }
+</style>
+</head>
+<body>
+
+<section id="intro">
+  <h1>In Bloom</h1>
+  <p>scroll to witness</p>
+  <div class="scroll-arrow">
+    <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+</section>
+
+<section id="scroll-scene">
+  <div id="sticky-shell">
+
+    <div id="video-side">
+      <video id="vid"
+        src="https://drive.google.com/uc?export=download&id=1hujjxtQzw2KROcZWlCPgLqmuqkC_sP3P"
+        preload="auto"
+        muted
+        playsinline>
+      </video>
+    </div>
+
+    <div id="info-panel">
+      <div id="panel-top">
+        <div class="label">Time-lapse study</div>
+        <h2>A flower<br>finds the light</h2>
+        <p>Each scroll reveals a moment in a life measured in hours, not years. Watch form emerge from stillness.</p>
+      </div>
+
+      <div id="timeline">
+        <div class="tl-item active" data-from="0" data-to="0.25">
+          <div class="tl-dot"></div>
+          <div class="tl-text">
+            <div class="tl-title">Dormancy</div>
+            <div class="tl-desc">The bud holds its breath, coiled tight against the world.</div>
+          </div>
+        </div>
+        <div class="tl-item" data-from="0.25" data-to="0.5">
+          <div class="tl-dot"></div>
+          <div class="tl-text">
+            <div class="tl-title">First movement</div>
+            <div class="tl-desc">Petals begin their slow unbinding, seeking warmth.</div>
+          </div>
+        </div>
+        <div class="tl-item" data-from="0.5" data-to="0.75">
+          <div class="tl-dot"></div>
+          <div class="tl-text">
+            <div class="tl-title">Opening</div>
+            <div class="tl-desc">Color floods the frame. The form declares itself.</div>
+          </div>
+        </div>
+        <div class="tl-item" data-from="0.75" data-to="1">
+          <div class="tl-dot"></div>
+          <div class="tl-text">
+            <div class="tl-title">Full bloom</div>
+            <div class="tl-desc">Complete. Still. A brief, perfect moment.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="progress-wrap">
+      <div id="progress-track">
+        <div id="progress-fill"></div>
+      </div>
+      <div id="progress-time">0:00</div>
+    </div>
+
+  </div>
+</section>
+
+<section id="outro">
+  <p>nature moves at its own pace —<br>we only follow</p>
+</section>
+
+<script>
+const vid = document.getElementById('vid');
+const fill = document.getElementById('progress-fill');
+const timeEl = document.getElementById('progress-time');
+const scene = document.getElementById('scroll-scene');
+const items = document.querySelectorAll('.tl-item');
+
+vid.addEventListener('loadedmetadata', () => {
+  vid.pause();
+  vid.currentTime = 0;
+});
+
+function fmt(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return m + ':' + String(sec).padStart(2, '0');
+}
+
+window.addEventListener('scroll', () => {
+  const rect = scene.getBoundingClientRect();
+  const scrollable = scene.offsetHeight - window.innerHeight;
+  const scrolled = Math.max(0, -rect.top);
+  const p = Math.min(1, scrolled / scrollable);
+
+  if (vid.duration) {
+    vid.currentTime = p * vid.duration;
+    fill.style.width = (p * 100) + '%';
+    timeEl.textContent = fmt(vid.currentTime) + ' / ' + fmt(vid.duration);
+  }
+
+  items.forEach(item => {
+    const from = parseFloat(item.dataset.from);
+    const to = parseFloat(item.dataset.to);
+    item.classList.toggle('active', p >= from && p < to || (p >= 0.75 && to === 1));
+  });
+}, { passive: true });
+</script>
+
+</body>
+</html>
